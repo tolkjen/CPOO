@@ -8,7 +8,6 @@
 #include "BackgroundModel.h"
 
 BackgroundModel::~BackgroundModel() {
-
 }
 
 string BackgroundModel::name() const {

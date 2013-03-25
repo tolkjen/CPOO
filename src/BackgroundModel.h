@@ -18,8 +18,24 @@ class BackgroundModel {
 public:
 	virtual ~BackgroundModel();
 
+	// ------------------------------------------------------------------------
+	// insert
+	//
+	// With this method you add new frames to the object.
 	virtual void insert(Mat &m) = 0;
+
+	// ------------------------------------------------------------------------
+	// name
+	//
+	// Returns a name description of the class object (eg. "Codebook")
 	string name() const;
+
+	// ------------------------------------------------------------------------
+	// resultingFrame
+	//
+	// Returns a frame which is the result of algorithms performed by this
+	// class (eg. black-white frame showing black background and white
+	// foreground).
 	virtual Mat resultingFrame() = 0;
 
 protected:

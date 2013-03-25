@@ -2,7 +2,7 @@
  * bmodel.cpp
  *
  *  Created on: 24-03-2013
- *      Author: tolkjen
+ *      Author: Piotr T¹kiel
  */
 
 #include <opencv2\opencv.hpp>
@@ -15,10 +15,32 @@
 using namespace cv;
 using namespace std;
 
+// ----------------------------------------------------------------------------
+// printHelp
+//
+// Prints a message on how to use program
 void printHelp();
+
+// ----------------------------------------------------------------------------
+// createModels
+//
+// Returns a vector containing pointers to objects, which perform background
+// subtraction operations. These objects are created in this function and freed
+// by freeModels() function.
 vector<BackgroundModel*> createModels();
+
+// ----------------------------------------------------------------------------
+// freeModels
+//
+// Frees memory occupied by BackgroundModels stored in a vector object
 void freeModels(vector<BackgroundModel*> &v);
 
+// ----------------------------------------------------------------------------
+// The first thing which happens inside main() is opening the video stream.
+// Next, instances of classes derived from BackgroundModel class are created
+// and stored in models vector. Lastly inside a loop each background model
+// object is fed with video frames and the resulting video output is presented
+// in a window.
 int main( int argc, char** argv ) {
 	// arguments
 	if (argc != 2) {
@@ -56,6 +78,7 @@ int main( int argc, char** argv ) {
 			imshow(models[i]->name().c_str(), models[i]->resultingFrame());
 		}
 
+		// Look for Esc key
 		keyPressed = (char) cvWaitKey(fps);
 		if (keyPressed == 27) {
 			break;
@@ -73,7 +96,10 @@ void printHelp() {
 
 vector<BackgroundModel*> createModels() {
 	vector<BackgroundModel*> models;
-	models.push_back(new PreviewModel());
+
+	models.push_back( new PreviewModel() );
+	// ADD NEW MODELS HERE
+	// eg. models.push_back( new SomeHistogramModel() );
 
 	for (unsigned int i = 0; i < models.size(); i++) {
 		namedWindow(models[i]->name().c_str(), CV_WINDOW_AUTOSIZE);

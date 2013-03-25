@@ -13,6 +13,11 @@
 using namespace std;
 using namespace cv;
 
+// ----------------------------------------------------------------------------
+// PreviewModel class
+//
+// Instance of this class returns unchanged video frame and works as a preview
+// of original video sequence.
 class PreviewModel: public BackgroundModel {
 public:
 	PreviewModel();
