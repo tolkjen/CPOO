@@ -5,7 +5,7 @@
  *      Author: Piotr T¹kiel
  */
 
-#include <opencv2\opencv.hpp>
+#include <opencv2/opencv.hpp>
 #include <iostream>
 #include <vector>
 #include <memory>

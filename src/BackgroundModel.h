@@ -8,7 +8,7 @@
 #ifndef BACKGROUNDMODEL_H_
 #define BACKGROUNDMODEL_H_
 
-#include <opencv2\opencv.hpp>
+#include <opencv2/opencv.hpp>
 #include <string>
 
 using namespace cv;
