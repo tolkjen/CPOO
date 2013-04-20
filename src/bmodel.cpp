@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "PreviewModel.h"
+#include "HistogramModel.h"
 
 using namespace cv;
 using namespace std;
@@ -87,7 +88,7 @@ int main( int argc, char** argv ) {
 
 	// free background models' memory
 	freeModels(models);
-    return 0;
+	return 0;
 }
 
 void printHelp() {
@@ -97,9 +98,8 @@ void printHelp() {
 vector<BackgroundModel*> createModels() {
 	vector<BackgroundModel*> models;
 
-	models.push_back( new PreviewModel() );
-	// ADD NEW MODELS HERE
-	// eg. models.push_back( new SomeHistogramModel() );
+	//models.push_back( new PreviewModel() );
+	models.push_back( new HistogramModel(20, 30, 2) );
 
 	for (unsigned int i = 0; i < models.size(); i++) {
 		namedWindow(models[i]->name().c_str(), CV_WINDOW_AUTOSIZE);

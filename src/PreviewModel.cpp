@@ -15,6 +15,6 @@ void PreviewModel::insert(Mat &m) {
 	_frame = m;
 }
 
-Mat PreviewModel::resultingFrame() {
+Mat& PreviewModel::resultingFrame() {
 	return _frame;
 }

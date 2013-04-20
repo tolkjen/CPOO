@@ -36,7 +36,7 @@ public:
 	// Returns a frame which is the result of algorithms performed by this
 	// class (eg. black-white frame showing black background and white
 	// foreground).
-	virtual Mat resultingFrame() = 0;
+	virtual Mat& resultingFrame() = 0;
 
 protected:
 	string _name;

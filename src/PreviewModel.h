@@ -23,7 +23,7 @@ public:
 	PreviewModel();
 
 	virtual void insert(Mat &m);
-	virtual Mat resultingFrame();
+	virtual Mat& resultingFrame();
 
 private:
 	Mat _frame;
