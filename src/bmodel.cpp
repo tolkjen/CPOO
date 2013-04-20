@@ -2,10 +2,10 @@
  * bmodel.cpp
  *
  *  Created on: 24-03-2013
- *      Author: Piotr T¹kiel
+ *  Author: Piotr Takiel
  */
 
-#include <opencv2\opencv.hpp>
+#include <opencv2/opencv.hpp>
 #include <iostream>
 #include <vector>
 #include <memory>
@@ -54,7 +54,7 @@ int main( int argc, char** argv ) {
 
 	// open video stream
 	VideoCapture videoStream(inputFilename);
-	if (!videoStream.isOpened()) {
+	/*if (!videoStream.isOpened()) {
 		cerr << "Can't open file (" << inputFilename << ")" << endl;
 		return 1;
 	}
@@ -87,7 +87,7 @@ int main( int argc, char** argv ) {
 	}
 
 	// free background models' memory
-	freeModels(models);
+	freeModels(models);*/
 	return 0;
 }
 
@@ -98,8 +98,8 @@ void printHelp() {
 vector<BackgroundModel*> createModels() {
 	vector<BackgroundModel*> models;
 
-	//models.push_back( new PreviewModel() );
-	models.push_back( new HistogramModel(20, 30, 2) );
+	models.push_back( new PreviewModel() );
+	//models.push_back( new HistogramModel(20, 30, 2) );
 
 	for (unsigned int i = 0; i < models.size(); i++) {
 		namedWindow(models[i]->name().c_str(), CV_WINDOW_AUTOSIZE);
