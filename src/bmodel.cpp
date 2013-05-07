@@ -12,6 +12,7 @@
 
 #include "PreviewModel.h"
 #include "HistogramModel.h"
+#include "MedianModel.h"
 
 using namespace cv;
 using namespace std;
@@ -98,8 +99,9 @@ void printHelp() {
 vector<BackgroundModel*> createModels() {
 	vector<BackgroundModel*> models;
 
-	//models.push_back( new PreviewModel() );
+	models.push_back( new PreviewModel() );
 	models.push_back( new HistogramModel(20, 30, 2) );
+	models.push_back( new MedianModel(20, 30) );
 
 	for (unsigned int i = 0; i < models.size(); i++) {
 		namedWindow(models[i]->name().c_str(), CV_WINDOW_AUTOSIZE);
