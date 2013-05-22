@@ -10,20 +10,18 @@
 #include "CodebookModel.h"
 
 CodebookModel::CodebookModel() {
-    c, n, nframes = 0;
-	yuvImage = 0;
-	nframesToLearnBG = 100;
-	ImaskCodeBook = 0;
-	ImaskCodeBookCC = 0;
 
-    model = cvCreateBGCodeBookModel();
+    nframes_to_learn = 100;
+
+    c, n, nframes = 0;
+    yuvImage = 0;
+    ImaskCodeBook = 0;
+	ImaskCodeBookCC = 0;
     
     //Set color thresholds to default values
-    model->modMin[0] = 3;
-    model->modMin[1] = model->modMin[2] = 3;
-    model->modMax[0] = 10;
-    model->modMax[1] = model->modMax[2] = 10;
-    model->cbBounds[0] = model->cbBounds[1] = model->cbBounds[2] = 30;
+    modMin[0] = modMin[1] = modMin[2] = 3;
+    modMax[0] = modMax[1] = modMax[2] = 10;
+    cbBounds[0] = cbBounds[1] = cbBounds[2] = 30;
 
     tmp_elem = 0;
 
@@ -51,16 +49,18 @@ void CodebookModel::insert(IplImage *rawFrame) {
         }
 	    cvCvtColor( rawFrame, yuvImage, CV_BGR2YCrCb );
         //  yuvImage = cvCloneImage(rawFrame);
-		if( nframes-1 < nframesToLearnBG  )
+        if( nframes-1 < nframes_to_learn  ) {
             codebookUpdate();
+        }
 
-        if( nframes-1 == nframesToLearnBG  )
-            codebookClearStale(model->t/2 );
+        if( nframes-1 == nframes_to_learn  )
+            codebookClearStale(t/2 );
 
-		if( nframes-1 >= nframesToLearnBG  ) {
-             codebookDiff();
+        codebookDiff();
+        if( nframes-1 >= nframes_to_learn ) {
+
              cvCopy(ImaskCodeBook,ImaskCodeBookCC);
-             cvSegmentFGMask( ImaskCodeBookCC,0,10 );
+             cvSegmentFGMask( ImaskCodeBookCC,0.1,10 );
 		}
 
 		return;
@@ -70,7 +70,7 @@ Mat& CodebookModel::resultingFrame() {
 }
 
 IplImage* CodebookModel::resultingCap() {
-    //return ImaskCodeBook;
+    return ImaskCodeBook;
 	return ImaskCodeBookCC;
 }
 
@@ -79,25 +79,23 @@ void CodebookModel::codebookUpdate()
     CvMat stub, *image = cvGetMat( yuvImage, &stub );
     int i, x, y, T;
     int nblocks;
-    CvBGCodeBookElem* freeList;
 
-    if( image->cols != model->size.width || image->rows != model->size.height )
+    if( image->cols != size.width || image->rows != size.height )
     {
-        model->freeList = 0;
-        cvFree( &model->cbmap );
-        int bufSz = image->cols*image->rows*sizeof(model->cbmap[0]);
-        model->cbmap = (CvBGCodeBookElem**)cvAlloc(bufSz);
-        memset( model->cbmap, 0, bufSz );
-        model->size = cvSize(image->cols, image->rows);
+        cvFree( &cbmap );
+        int bufSz = image->cols*image->rows*sizeof(cbmap[0]);
+        cbmap = (CvBGCodeBookElem**)cvAlloc(bufSz);
+        memset( cbmap, 0, bufSz );
+        size = cvSize(image->cols, image->rows);
     }
 
-    T = ++model->t;
+    T = ++t;
     nblocks = 1024;
 
     for( y = 0; y < image->rows; y++ )
     {
         const uchar* p = image->data.ptr + image->step*y;
-        CvBGCodeBookElem** cb = model->cbmap + image->cols*y;
+        CvBGCodeBookElem** cb = cbmap + image->cols*y;
 
         for( x = 0; x < image->cols; x++, p += 3, cb++ )
         {
@@ -107,8 +105,8 @@ void CodebookModel::codebookUpdate()
 
             //p0 = p[0]; p1 = p[1]; p2 = p[2];
             for (int i=0; i<3; i++) {
-                low[i] = p[i] - model->cbBounds[i]; if (low[i] < 0) low[i] = 0;
-                high[i] = p[i] + model->cbBounds[i]; if (high[i] < 0) high[i] = 0;
+                low[i] = p[i] - cbBounds[i]; if (low[i] < 0) low[i] = 0;
+                high[i] = p[i] + cbBounds[i]; if (high[i] < 0) high[i] = 0;
             }
 
             for( e = *cb; e != 0; e = e->next )
@@ -173,13 +171,13 @@ void CodebookModel::codebookUpdate()
 void CodebookModel::codebookClearStale(int staleThresh)
 {
     int x, y, T;
-    T = model->t;
+    T = t;
 
-    for( y = 0; y < model->size.height; y++ )
+    for( y = 0; y < size.height; y++ )
     {
-        CvBGCodeBookElem** cb = model->cbmap + model->size.width*y;
+        CvBGCodeBookElem** cb = cbmap + size.width*y;
 
-        for( x = 0; x < model->size.width; x++, cb++ )
+        for( x = 0; x < size.width; x++, cb++ )
         {
             CvBGCodeBookElem *e, first, *prev = &first;
 
@@ -220,15 +218,15 @@ int CodebookModel::codebookDiff()
     {
         const uchar* p = image->data.ptr + image->step*y;
         uchar* m = mask->data.ptr + mask->step*y;
-        CvBGCodeBookElem** cb = model->cbmap + image->cols*y;
+        CvBGCodeBookElem** cb = cbmap + image->cols*y;
 
         for( x = 0; x < image->width; x++, p += 3, cb++ )
         {
             CvBGCodeBookElem *e;
             int low[3], high[3];
             for(int i=0; i<3; i++) {
-                low[i] = p[i] + model->modMin[i];
-                high[i] = p[i] - model->modMax[i];
+                low[i] = p[i] + modMin[i];
+                high[i] = p[i] - modMax[i];
             }
 
             m[x] = (uchar)255;

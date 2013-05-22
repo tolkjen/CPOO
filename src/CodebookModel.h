@@ -61,16 +61,23 @@ private:
     void codebookUpdate();
     void codebookClearStale(int staleThresh);
     int codebookDiff();
-    CvBGCodeBookModel* model;
+    //CvBGCodeBookModel* model;
     
     IplImage *ImaskCodeBook, *ImaskCodeBookCC;
-    int c, n, nframes;
-    codeBookStorage cbs;
     IplImage* yuvImage; //yuvImage is for codebook method
-    int nframesToLearnBG;
+    int c, n, nframes;
 
+    int nframes_to_learn;
+
+    /* parametry do modelu*/
+    int t;
+    CvSize size;
+    uchar cbBounds[3];
+    uchar modMin[3];
+    uchar modMax[3];
     /* do przechowywania elementow zaalokowanych wprzod */
     CvBGCodeBookElem *tmp_elem;
+    CvBGCodeBookElem** cbmap;
 };
 
 #endif /* HISTOGRAMMODEL_H_ */
