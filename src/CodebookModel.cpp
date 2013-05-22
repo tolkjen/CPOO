@@ -10,7 +10,9 @@
 #include "CodebookModel.h"
 
 CodebookModel::CodebookModel() {
-    c, n, nframes = 0;
+    c = 0;
+    n = 0;
+    nframes = 0;
 	yuvImage = 0;
 	nframesToLearnBG = 100;
 	ImaskCodeBook = 0;
@@ -67,6 +69,8 @@ void CodebookModel::insert(IplImage *rawFrame) {
 }
 
 Mat& CodebookModel::resultingFrame() {
+	Mat m;
+	return m;
 }
 
 IplImage* CodebookModel::resultingCap() {
@@ -77,9 +81,8 @@ IplImage* CodebookModel::resultingCap() {
 void CodebookModel::codebookUpdate()
 {
     CvMat stub, *image = cvGetMat( yuvImage, &stub );
-    int i, x, y, T;
+    int x, y, T;
     int nblocks;
-    CvBGCodeBookElem* freeList;
 
     if( image->cols != model->size.width || image->rows != model->size.height )
     {

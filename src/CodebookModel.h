@@ -10,9 +10,9 @@
 
 #include <list>
 #include <opencv2/opencv.hpp>
-#include "cvaux.h"
-#include "cxmisc.h"
-#include "highgui.h"
+#include <opencv/cvaux.h>
+#include <opencv/cxmisc.h>
+#include <opencv/highgui.h>
 
 #include "BackgroundModel.h"
 
