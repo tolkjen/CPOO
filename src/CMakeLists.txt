@@ -9,13 +9,20 @@ ADD_DEFINITIONS(${QT_DEFINITIONS})
 
 # the variable "qtproject_SRCS" contains all .cpp files of this project
 
-SET(bmodel_SOURCES BackgroundModel.cpp PreviewModel.cpp bmodel.cpp)
+SET(bmodel_SOURCES
+		BackgroundModel.cpp  bmodel.cpp  HistogramModel.cpp  MedianModel.cpp  PreviewModel.cpp
+		CodebookModel.cpp
+)
 
 SET(bmodel_HEADERSQT )
 SET(bmodel_HEADERS 
 		${bmodel_HEADERSQT}
-		BackgroundModel.h 
-		PreviewModel.h)
+		BackgroundModel.h
+		HistogramModel.h
+		MedianModel.h
+		PreviewModel.h
+		CodebookModel.h
+)
 
 #set(ctitest_SOURCES
 #)

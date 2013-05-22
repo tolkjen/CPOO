@@ -10,6 +10,7 @@
 #include <vector>
 #include <memory>
 
+#include "CodebookModel.h"
 #include "PreviewModel.h"
 #include "HistogramModel.h"
 #include "MedianModel.h"
@@ -52,16 +53,19 @@ int main( int argc, char** argv ) {
 
 	// input filename
 	const string inputFilename = argv[1];
+    CvCapture* capture = 0;
+	IplImage* rawImage = 0;
 
 	// open video stream
-	VideoCapture videoStream(inputFilename);
-	if (!videoStream.isOpened()) {
+	capture = cvCreateFileCapture( inputFilename.c_str() );
+	if (!capture ) {
 		cerr << "Can't open file (" << inputFilename << ")" << endl;
 		return 1;
 	}
 
 	// get frame rate
-	int fps = (int) videoStream.get(CV_CAP_PROP_FPS);
+	int fps = (int) cvGetCaptureProperty(capture, CV_CAP_PROP_FPS);
+	//int fps = (int) videoStream.get(CV_CAP_PROP_FPS);
 
 	// vector containing objects determining background model
 	vector<BackgroundModel*> models = createModels();
@@ -70,14 +74,20 @@ int main( int argc, char** argv ) {
 	char keyPressed;
 	Mat videoFrame;
 	while (true) {
-		videoStream >> videoFrame;
-		if (videoFrame.empty()) {
+        rawImage = cvQueryFrame( capture );
+		if (!rawImage) {
 			break;
 		}
-
+        videoFrame = cvarrToMat(rawImage);
 		for (unsigned int i = 0; i < models.size(); i++) {
-			models[i]->insert(videoFrame);
-			imshow(models[i]->name().c_str(), models[i]->resultingFrame());
+			if (models[i]->useCapture()) {
+				models[i]->insert(rawImage);
+				cvShowImage(models[i]->name().c_str(), models[i]->resultingCap());
+				
+			} else {
+				models[i]->insert(videoFrame);
+			    imshow(models[i]->name().c_str(), models[i]->resultingFrame());
+			}
 		}
 
 		// Look for Esc key
@@ -100,11 +110,13 @@ vector<BackgroundModel*> createModels() {
 	vector<BackgroundModel*> models;
 
 	models.push_back( new PreviewModel() );
-	models.push_back( new HistogramModel(20, 30, 2) );
-	models.push_back( new MedianModel(20, 30) );
+	models.push_back(new CodebookModel() );
+//	models.push_back( new HistogramModel(20, 30, 2) );
+//	models.push_back( new MedianModel(20, 30) );
 
 	for (unsigned int i = 0; i < models.size(); i++) {
 		namedWindow(models[i]->name().c_str(), CV_WINDOW_AUTOSIZE);
+		cvMoveWindow(models[i]->name().c_str(), i*450, 0);
 	}
 	return models;
 }

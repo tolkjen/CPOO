@@ -22,7 +22,8 @@ public:
 	// insert
 	//
 	// With this method you add new frames to the object.
-	virtual void insert(Mat &m) = 0;
+	virtual void insert(Mat &m);
+	virtual void insert(IplImage *rawImage);
 
 	// ------------------------------------------------------------------------
 	// name
@@ -37,7 +38,9 @@ public:
 	// class (eg. black-white frame showing black background and white
 	// foreground).
 	virtual Mat& resultingFrame() = 0;
+	virtual IplImage* resultingCap();
 
+	virtual bool useCapture();
 protected:
 	string _name;
 };
