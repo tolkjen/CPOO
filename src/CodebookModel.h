@@ -22,7 +22,7 @@ using namespace std;
 class CodebookModel: public BackgroundModel {
     typedef struct codebook_element {
         struct codebook_element* next;
-        int tLastUpdate;
+        int t_last_update;
         int stale;
         uchar boxMin[3];
         uchar boxMax[3];
@@ -42,23 +42,13 @@ private:
     codebook_element * new_element();
     void remove_element(codebook_element *elem);
 
-	double Kfunc(int x);
-	inline double KfuncPrecomp(int x);
-	void preparePrecomp();
-
-	list<Mat> frames;
-	Mat *modelFrame;
-	Mat outputFrame;
-	int frameBufferSize, treshold;
-
     void codebookUpdate();
     void codebookClearStale(int staleThresh);
     int codebookDiff();
-    //CvBGCodeBookModel* model;
     
     IplImage *ImaskCodeBook, *ImaskCodeBookCC;
-    IplImage* yuvImage; //yuvImage is for codebook method
-    int c, n, nframes;
+    IplImage* yuvImage;
+    int c, nframes;
 
     int nframes_to_learn;
 

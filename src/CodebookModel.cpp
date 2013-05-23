@@ -13,7 +13,7 @@ CodebookModel::CodebookModel() {
 
     nframes_to_learn = 100;
 
-    c, n, nframes = 0;
+    nframes = 0;
     yuvImage = 0;
     ImaskCodeBook = 0;
 	ImaskCodeBookCC = 0;
@@ -38,10 +38,10 @@ CodebookModel::~CodebookModel() {
 
 void CodebookModel::insert(IplImage *rawFrame) {
       //First time:
+    int frame = nframes++;
+    //nframes++;
 
-	nframes++;
-
-        if( nframes == 1 )
+        if( frame == 0 )
         {
             yuvImage = cvCloneImage(rawFrame);
             ImaskCodeBook = cvCreateImage( cvGetSize(yuvImage), IPL_DEPTH_8U, 1 );
@@ -50,18 +50,18 @@ void CodebookModel::insert(IplImage *rawFrame) {
         }
 	    cvCvtColor( rawFrame, yuvImage, CV_BGR2YCrCb );
         //  yuvImage = cvCloneImage(rawFrame);
-        if( nframes-1 < nframes_to_learn  ) {
+        if( frame < nframes_to_learn  ) {
             cout << "t: " << t << endl;
             codebookUpdate();
         }
 
-        if( nframes-1 == nframes_to_learn  ) {
+        if( frame == nframes_to_learn  ) {
             cout << "t: " << t << endl;
             codebookClearStale(t/2 );
         }
 
 
-        if( nframes-1 >= nframes_to_learn ) {
+        if( frame >= nframes_to_learn ) {
                codebookDiff();
              cvCopy(ImaskCodeBook,ImaskCodeBookCC);
              cvSegmentFGMask( ImaskCodeBookCC,0.1,10 );
@@ -74,7 +74,7 @@ Mat& CodebookModel::resultingFrame() {
 }
 
 IplImage* CodebookModel::resultingCap() {
-  //  return ImaskCodeBook;
+    return ImaskCodeBook;
 	return ImaskCodeBookCC;
 }
 
@@ -128,14 +128,14 @@ void CodebookModel::codebookUpdate()
         const uchar* p = image->data.ptr + image->step*y;
         codebook_element** cb = cbmap + image->cols*y;
 
-        for( x = 0; x < image->cols; x++, p += 3, cb++ )
+        for( x = 0; x < image->cols; x++, p += CHANNELS, cb++ )
         {
             codebook_element *elem, *found = 0;
-            int high[3], low[3];
+            int high[CHANNELS], low[CHANNELS];
             int negRun;
 
             //p0 = p[0]; p1 = p[1]; p2 = p[2];
-            for (int i=0; i<3; i++) {
+            for (int i=0; i<CHANNELS; i++) {
                 low[i] = p[i] - cbBounds[i]; if (low[i] < 0) low[i] = 0;
                 high[i] = p[i] + cbBounds[i]; if (high[i] < 0) high[i] = 0;
             }
@@ -146,15 +146,15 @@ void CodebookModel::codebookUpdate()
                     elem->learnMin[1] <= p[1] && p[1] <= elem->learnMax[1] &&
                     elem->learnMin[2] <= p[2] && p[2] <= elem->learnMax[2] )
                 {
-                    elem->tLastUpdate = T;
-                    for (int i = 0; i<3; i++) {
+                    elem->t_last_update = T;
+                    for (int i = 0; i<CHANNELS; i++) {
                         elem->boxMin[i] = MIN(elem->boxMin[i], p[i]);
                         elem->boxMax[i] = MAX(elem->boxMax[i], p[i]);
                     }
 
                     // no need to use SAT_8U for updated learnMin[i] & learnMax[i] here,
                     // as the bounding li & hi are already within 0..255.
-                    for (int i = 0; i<3; i++) {
+                    for (int i = 0; i<CHANNELS; i++) {
                         if( elem->learnMin[i] > low[i] ) elem->learnMin[i]--;
                         if( elem->learnMax[i] < high[i] ) elem->learnMax[i]++;
                     }
@@ -162,13 +162,13 @@ void CodebookModel::codebookUpdate()
                     found = elem;
                     break;
                 }
-                negRun = T - elem->tLastUpdate;
+                negRun = T - elem->t_last_update;
                 elem->stale = MAX( elem->stale, negRun );
             }
 
             for( ; elem != 0; elem = elem->next )
             {
-                negRun = T - elem->tLastUpdate;
+                negRun = T - elem->t_last_update;
                 elem->stale = MAX( elem->stale, negRun );
             }
 
@@ -176,11 +176,11 @@ void CodebookModel::codebookUpdate()
             {
                 elem = new_element();
 
-                for (int i = 0; i<3; i++) {
+                for (int i = 0; i<CHANNELS; i++) {
                     elem->learnMin[i] = low[i]; elem->learnMax[i] = high[i];
                     elem->boxMin[i] = elem->boxMax[i] = p[i];
                 }
-                elem->tLastUpdate = T;
+                elem->t_last_update = T;
                 elem->stale = 0;
                 elem->next = *cb;
                 *cb = elem;
@@ -214,9 +214,8 @@ void CodebookModel::codebookClearStale(int staleThresh)
                 }
                 else
                 {
-                    //cout << "stale = 0; stale: " << elem->stale << "staleThresh" << staleThresh << " X: "<<x << " Y: " << y << endl;
                     elem->stale = 0;
-                    elem->tLastUpdate = T;
+                    elem->t_last_update = T;
                     prev = elem;
                 }
             }
@@ -224,8 +223,6 @@ void CodebookModel::codebookClearStale(int staleThresh)
             *cb = first.next;
         }
     }
-    cout << "codebook clear X: "<<x << " Y: " << y << endl;
-
 }
 
 
@@ -243,11 +240,11 @@ int CodebookModel::codebookDiff()
         uchar* m = mask->data.ptr + mask->step*y;
         codebook_element** cb = cbmap + image->cols*y;
 
-        for( x = 0; x < image->width; x++, p += 3, cb++ )
+        for( x = 0; x < image->width; x++, p += CHANNELS, cb++ )
         {
             codebook_element *elem;
-            int low[3], high[3];
-            for(int i=0; i<3; i++) {
+            int low[CHANNELS], high[CHANNELS];
+            for(int i=0; i<CHANNELS; i++) {
                 low[i] = p[i] + modMin[i];
                 high[i] = p[i] - modMax[i];
             }
