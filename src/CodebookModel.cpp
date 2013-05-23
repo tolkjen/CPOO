@@ -21,10 +21,11 @@ CodebookModel::CodebookModel() {
     //Set color thresholds to default values
     modMin[0] = modMin[1] = modMin[2] = 3;
     modMax[0] = modMax[1] = modMax[2] = 10;
-    cbBounds[0] = cbBounds[1] = cbBounds[2] = 30;
+    cbBounds[0] = cbBounds[1] = cbBounds[2] = 10;
+    t=0;
 
     tmp_elem = 0;
-
+    tmp_elems_free = 0;
     _name = "Codebook";
 }
 
@@ -50,15 +51,18 @@ void CodebookModel::insert(IplImage *rawFrame) {
 	    cvCvtColor( rawFrame, yuvImage, CV_BGR2YCrCb );
         //  yuvImage = cvCloneImage(rawFrame);
         if( nframes-1 < nframes_to_learn  ) {
+            cout << "t: " << t << endl;
             codebookUpdate();
         }
 
-        if( nframes-1 == nframes_to_learn  )
+        if( nframes-1 == nframes_to_learn  ) {
+            cout << "t: " << t << endl;
             codebookClearStale(t/2 );
+        }
 
-        codebookDiff();
+
         if( nframes-1 >= nframes_to_learn ) {
-
+               codebookDiff();
              cvCopy(ImaskCodeBook,ImaskCodeBookCC);
              cvSegmentFGMask( ImaskCodeBookCC,0.1,10 );
 		}
@@ -70,36 +74,63 @@ Mat& CodebookModel::resultingFrame() {
 }
 
 IplImage* CodebookModel::resultingCap() {
-    return ImaskCodeBook;
+  //  return ImaskCodeBook;
 	return ImaskCodeBookCC;
+}
+
+CodebookModel::codebook_element *CodebookModel::new_element() {
+    int nblocks = 1024;
+
+    if( !tmp_elem )
+    {
+        //printf("free_elems: %d\n", tmp_elems_free);
+        /* alokowanie wprzod: lepiej wiecej na raz niz osobno, bo szybciej */
+        tmp_elem = (codebook_element*)malloc(sizeof(*tmp_elem) * nblocks);
+        tmp_elems_free=nblocks;
+        for(int i = 0; i < nblocks-1; i++ )
+            tmp_elem[i].next = &tmp_elem[i+1];
+        tmp_elem[nblocks-1].next = 0;
+    }
+    tmp_elems_free--;
+    codebook_element* ret = tmp_elem;
+    tmp_elem = tmp_elem->next;
+    return ret;
+}
+
+void CodebookModel::remove_element(codebook_element* elem) {
+    //printf("remove element \n");
+    elem->next = tmp_elem;
+    tmp_elem = elem;
+
+    tmp_elems_free++;
+    if(tmp_elems_free % 1024 == 0) printf("freed elements: %d\n", tmp_elems_free);
 }
 
 void CodebookModel::codebookUpdate()
 {
     CvMat stub, *image = cvGetMat( yuvImage, &stub );
     int i, x, y, T;
-    int nblocks;
+
 
     if( image->cols != size.width || image->rows != size.height )
     {
-        cvFree( &cbmap );
+        //cvFree( &cbmap );
         int bufSz = image->cols*image->rows*sizeof(cbmap[0]);
-        cbmap = (CvBGCodeBookElem**)cvAlloc(bufSz);
+        cbmap = (codebook_element**)cvAlloc(bufSz);
         memset( cbmap, 0, bufSz );
         size = cvSize(image->cols, image->rows);
     }
 
     T = ++t;
-    nblocks = 1024;
 
     for( y = 0; y < image->rows; y++ )
     {
         const uchar* p = image->data.ptr + image->step*y;
-        CvBGCodeBookElem** cb = cbmap + image->cols*y;
+        codebook_element** cb = cbmap + image->cols*y;
 
         for( x = 0; x < image->cols; x++, p += 3, cb++ )
         {
-            CvBGCodeBookElem *e, *found = 0;
+            codebook_element *elem, *found = 0;
             int high[3], low[3];
             int negRun;
 
@@ -109,59 +140,50 @@ void CodebookModel::codebookUpdate()
                 high[i] = p[i] + cbBounds[i]; if (high[i] < 0) high[i] = 0;
             }
 
-            for( e = *cb; e != 0; e = e->next )
+            for( elem = *cb; elem != 0; elem = elem->next )
             {
-                if( e->learnMin[0] <= p[0] && p[0] <= e->learnMax[0] &&
-                    e->learnMin[1] <= p[1] && p[1] <= e->learnMax[1] &&
-                    e->learnMin[2] <= p[2] && p[2] <= e->learnMax[2] )
+                if( elem->learnMin[0] <= p[0] && p[0] <= elem->learnMax[0] &&
+                    elem->learnMin[1] <= p[1] && p[1] <= elem->learnMax[1] &&
+                    elem->learnMin[2] <= p[2] && p[2] <= elem->learnMax[2] )
                 {
-                    e->tLastUpdate = T;
+                    elem->tLastUpdate = T;
                     for (int i = 0; i<3; i++) {
-                        e->boxMin[i] = MIN(e->boxMin[i], p[i]);
-                        e->boxMax[i] = MAX(e->boxMax[i], p[i]);
+                        elem->boxMin[i] = MIN(elem->boxMin[i], p[i]);
+                        elem->boxMax[i] = MAX(elem->boxMax[i], p[i]);
                     }
 
                     // no need to use SAT_8U for updated learnMin[i] & learnMax[i] here,
                     // as the bounding li & hi are already within 0..255.
                     for (int i = 0; i<3; i++) {
-                        if( e->learnMin[i] > low[i] ) e->learnMin[i]--;
-                        if( e->learnMax[i] < high[i] ) e->learnMax[i]++;
+                        if( elem->learnMin[i] > low[i] ) elem->learnMin[i]--;
+                        if( elem->learnMax[i] < high[i] ) elem->learnMax[i]++;
                     }
 
-                    found = e;
+                    found = elem;
                     break;
                 }
-                negRun = T - e->tLastUpdate;
-                e->stale = MAX( e->stale, negRun );
+                negRun = T - elem->tLastUpdate;
+                elem->stale = MAX( elem->stale, negRun );
             }
 
-            for( ; e != 0; e = e->next )
+            for( ; elem != 0; elem = elem->next )
             {
-                negRun = T - e->tLastUpdate;
-                e->stale = MAX( e->stale, negRun );
+                negRun = T - elem->tLastUpdate;
+                elem->stale = MAX( elem->stale, negRun );
             }
 
             if( !found )
             {
-                if( !tmp_elem )
-                {
-                    /* alokowanie wprzod: lepiej wiecej na raz niz osobno, bo szybciej */
-                    tmp_elem = (CvBGCodeBookElem*)malloc(sizeof(*tmp_elem) * nblocks);
-                    for(int i = 0; i < nblocks-1; i++ )
-                        tmp_elem[i].next = &tmp_elem[i+1];
-                    tmp_elem[nblocks-1].next = 0;
-                }
-                e = tmp_elem;
-                tmp_elem = tmp_elem->next;
+                elem = new_element();
 
                 for (int i = 0; i<3; i++) {
-                    e->learnMin[i] = low[i]; e->learnMax[i] = high[i];
-                    e->boxMin[i] = e->boxMax[i] = p[i];
+                    elem->learnMin[i] = low[i]; elem->learnMax[i] = high[i];
+                    elem->boxMin[i] = elem->boxMax[i] = p[i];
                 }
-                e->tLastUpdate = T;
-                e->stale = 0;
-                e->next = *cb;
-                *cb = e;
+                elem->tLastUpdate = T;
+                elem->stale = 0;
+                elem->next = *cb;
+                *cb = elem;
             }
         }
     }
@@ -172,35 +194,37 @@ void CodebookModel::codebookClearStale(int staleThresh)
 {
     int x, y, T;
     T = t;
-
+    cout <<"Codebook clear stale" <<endl;
     for( y = 0; y < size.height; y++ )
     {
-        CvBGCodeBookElem** cb = cbmap + size.width*y;
+        codebook_element** cb = cbmap + size.width*y;
 
         for( x = 0; x < size.width; x++, cb++ )
         {
-            CvBGCodeBookElem *e, first, *prev = &first;
+            codebook_element *elem, first, *prev = &first;
 
-            for( first.next = e = *cb; e != 0; e = prev->next )
+            for( first.next = elem = *cb; elem != 0; elem = prev->next )
             {
-                if( e->stale > staleThresh )
+                if( elem->stale > staleThresh )
                 {
                     /* nie kasujemy, tylko wrzucamy na liste wolnych */
-                    prev->next = e->next;
-                    e->next = tmp_elem;
-                    tmp_elem = e;
+                    prev->next = elem->next;
+                    remove_element(elem);
+
                 }
                 else
                 {
-                    e->stale = 0;
-                    e->tLastUpdate = T;
-                    prev = e;
+                    //cout << "stale = 0; stale: " << elem->stale << "staleThresh" << staleThresh << " X: "<<x << " Y: " << y << endl;
+                    elem->stale = 0;
+                    elem->tLastUpdate = T;
+                    prev = elem;
                 }
             }
 
             *cb = first.next;
         }
     }
+    cout << "codebook clear X: "<<x << " Y: " << y << endl;
 
 }
 
@@ -208,7 +232,6 @@ void CodebookModel::codebookClearStale(int staleThresh)
 int CodebookModel::codebookDiff()
 {
     int maskCount = -1;
-
     CvMat stub, *image = cvGetMat( yuvImage, &stub );
     CvMat mstub, *mask = cvGetMat( ImaskCodeBook, &mstub );
     int x, y;
@@ -218,11 +241,11 @@ int CodebookModel::codebookDiff()
     {
         const uchar* p = image->data.ptr + image->step*y;
         uchar* m = mask->data.ptr + mask->step*y;
-        CvBGCodeBookElem** cb = cbmap + image->cols*y;
+        codebook_element** cb = cbmap + image->cols*y;
 
         for( x = 0; x < image->width; x++, p += 3, cb++ )
         {
-            CvBGCodeBookElem *e;
+            codebook_element *elem;
             int low[3], high[3];
             for(int i=0; i<3; i++) {
                 low[i] = p[i] + modMin[i];
@@ -231,11 +254,25 @@ int CodebookModel::codebookDiff()
 
             m[x] = (uchar)255;
 
-            for( e = *cb; e != 0; e = e->next )
+            for( elem = *cb; elem != 0; elem = elem->next )
             {
-                if( e->boxMin[0] <= low[0] && high[0] <= e->boxMax[0] &&
-                    e->boxMin[1] <= low[1] && high[1] <= e->boxMax[1] &&
-                    e->boxMin[2] <= low[2] && high[2] <= e->boxMax[2] )
+                int i, correct =0;
+                for (i=0 ; i< CHANNELS ; i++) {
+                    if (elem->boxMin[i] <= low[i] && high[i] <= elem->boxMax[i] ) correct++;
+
+
+                }
+                if (correct == CHANNELS)
+                {
+                    m[x] = 0;
+                    maskCount--;
+                    break;
+                }
+
+                continue;
+                if( elem->boxMin[0] <= low[0] && high[0] <= elem->boxMax[0] &&
+                    elem->boxMin[1] <= low[1] && high[1] <= elem->boxMax[1] &&
+                    elem->boxMin[2] <= low[2] && high[2] <= elem->boxMax[2] )
                 {
                     m[x] = 0;
                     maskCount--;

@@ -20,25 +20,15 @@ using namespace std;
 #define CHANNELS 3
 
 class CodebookModel: public BackgroundModel {
-	typedef struct ce {
-		unsigned char learnHigh[CHANNELS];
-		unsigned char learnLow[CHANNELS];
-		unsigned char max[CHANNELS];
-		unsigned char min[CHANNELS];
-		int t_last_update;
-		int stale;
-	} s_code_element;
-
-	typedef struct code_book {
-		s_code_element **cb;
-		int numEntries;
-		int t;
-	} s_codeBook;
-
-	typedef struct codebook_storage {
-		s_codeBook *pixel;	
-        int t;
-	} codeBookStorage;
+    typedef struct codebook_element {
+        struct codebook_element* next;
+        int tLastUpdate;
+        int stale;
+        uchar boxMin[3];
+        uchar boxMax[3];
+        uchar learnMin[3];
+        uchar learnMax[3];
+    } codebook_element;
 public:
 	CodebookModel();
 	virtual ~CodebookModel();
@@ -49,6 +39,9 @@ public:
 	virtual bool useCapture();
 
 private:
+    codebook_element * new_element();
+    void remove_element(codebook_element *elem);
+
 	double Kfunc(int x);
 	inline double KfuncPrecomp(int x);
 	void preparePrecomp();
@@ -76,8 +69,9 @@ private:
     uchar modMin[3];
     uchar modMax[3];
     /* do przechowywania elementow zaalokowanych wprzod */
-    CvBGCodeBookElem *tmp_elem;
-    CvBGCodeBookElem** cbmap;
+    codebook_element *tmp_elem;
+    int tmp_elems_free;
+    codebook_element** cbmap;
 };
 
 #endif /* HISTOGRAMMODEL_H_ */
