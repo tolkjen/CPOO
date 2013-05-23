@@ -51,6 +51,7 @@ int main( int argc, char** argv ) {
 		return 1;
 	}
 
+
 	// input filename
 	const string inputFilename = argv[1];
     CvCapture* capture = 0;
