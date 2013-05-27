@@ -41,6 +41,8 @@ MedianModel::~MedianModel() {
 }
 
 void MedianModel::insert(Mat &m) {
+	// First we need to fill the buffer with 'frameBufferSize' frames. If it
+	// is filled, we may proceed to the algorithm.
 	if (queueFull) {
 		for (int y = 0; y < m.rows; y++) {
 			Vec3b *newFramePtr = m.ptr<Vec3b>(y);
@@ -57,10 +59,13 @@ void MedianModel::insert(Mat &m) {
 				outputPtr[x] = diff > treshold ? 255 : 0;
 			}
 		}
+	// If the buffer is not filled yet ...
 	} else {
+		// If the buffer is not allocated, allocate the memory for it.
 		if (!data) {
 			data = new uchar[m.rows * m.cols * frameBufferSize];
 		}
+		// Copy a frame into a buffer
 		for (int y = 0; y < m.rows; y++) {
 			Vec3b *newFramePtr = m.ptr<Vec3b>(y);
 			for (int x = 0; x < m.cols; x++) {
@@ -73,6 +78,8 @@ void MedianModel::insert(Mat &m) {
 				queueFull = true;
 			}
 		}
+		// If there is not output frame yet, create it and give it dimensions of
+		// a captured frame.
 		if (!outputFrame) {
 			outputFrame = new Mat(m.size(), CV_8U);
 		}

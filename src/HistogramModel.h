@@ -13,6 +13,16 @@
 
 using namespace std;
 
+// ----------------------------------------------------------------------------
+// HistogramModel class
+//
+// Histogram method uses kernel density estimation functions to estimate the
+// probability function of each pixel's value.
+//
+// The estimation is acquired by calculating a weighted sum of pixel's previous
+// values. Calculating a weight for each pixel is time-consuming, so in order
+// to increase performance, the weights are precalculated in object's
+// constructor.
 class HistogramModel: public BackgroundModel {
 public:
 	HistogramModel();

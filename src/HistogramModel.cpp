@@ -50,6 +50,8 @@ void HistogramModel::insert(Mat &m) {
 				int newGrey = (newFramePtr[x][0]+newFramePtr[x][1]+newFramePtr[x][2]) / 3;
 				double sum0 = 0, sum1 = 0;
 
+				// calculate the weighted sum using precalculated
+				// function values
 				for (it=frames.begin(); it!=frames.end(); ++it) {
 					Vec3b *buffFramePtr = it->ptr<Vec3b>(y);
 					int buffValue = (buffFramePtr[x][0]+buffFramePtr[x][1]+buffFramePtr[x][2]) / 3;
